@@ -1,31 +1,42 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.10'
-        }
+    agent any
+
+    triggers {
+        githubPush()   // Trigger build on GitHub webhook push
+    }
+
+    environment {
+        IMAGE_NAME = "flask-cicd-app"
+        CONTAINER_NAME = "flask-container"
     }
 
     stages {
-        stage('Build') {
+
+        stage('Clone Repository') {
             steps {
-                sh 'pip install -r requirements.txt'
+                git 'https://github.com/yogeshvshinde/CI-CD-Jenkins-Github.git'
             }
         }
 
-        stage('Test') {
+        stage('Build Docker Image') {
             steps {
-                sh 'pytest'
+                sh 'docker build -t $IMAGE_NAME .'
             }
         }
 
-        stage('Deploy') {
+        stage('Stop Old Container') {
             steps {
-                echo "Deploying to staging..."
-                sh 'python app.py &'
+                sh 'docker stop $CONTAINER_NAME || true'
+                sh 'docker rm $CONTAINER_NAME || true'
+            }
+        }
+
+        stage('Run Docker Container') {
+            steps {
+                sh 'docker run -d -p 5000:5000 --name $CONTAINER_NAME $IMAGE_NAME'
             }
         }
     }
-}
 
     post {
         success {
@@ -44,3 +55,4 @@ pipeline {
             )
         }
     }
+}
