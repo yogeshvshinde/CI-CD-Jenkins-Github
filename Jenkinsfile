@@ -15,8 +15,8 @@ pipeline {
         stage('Build') {
             steps {
                 echo "Installing Python dependencies..."
-                // Using --break-system-packages to bypass PEP 668 in this isolated Jenkins environment
-                sh 'pip install --break-system-packages --no-cache-dir -r requirements.txt'
+                // Using --break-system-packages and --ignore-installed to bypass Debian restrictions
+                sh 'pip install --break-system-packages --ignore-installed --no-cache-dir -r requirements.txt'
             }
         }
 
