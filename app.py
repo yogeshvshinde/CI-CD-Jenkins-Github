@@ -1,72 +1,88 @@
-from flask import Flask, jsonify, request
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 from flask_pymongo import PyMongo
+from bson.objectid import ObjectId
 import os
-
 
 app = Flask(__name__)
 
-# Get Mongo URI from environment variable
-mongo_uri = os.environ.get("MONGO_URI")
+# -------------------------------
+# Configuration
+# -------------------------------
 
-if not mongo_uri:
-    raise Exception("MONGO_URI environment variable not set!")
+# Use environment variables (from Docker/Jenkins)
+app.config["MONGO_URI"] = os.environ.get("MONGO_URI", "mongodb://mongodb:27017/mydb")
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key")
 
-# Configure MongoDB
-app.config["MONGO_URI"] = os.environ.get("MONGO_URI")
-
-
-# Initialize PyMongo
-
+# Initialize Mongo (NO TLS for local Docker Mongo)
 mongo = PyMongo(app)
 
 # -------------------------------
 # Routes
 # -------------------------------
 
+# Home page -> list students
 @app.route('/')
-def home():
-    return """
-    <h1>Flask CI/CD Pipeline 🚀</h1>
-    <p>MongoDB Connected Successfully</p>
-    <p>Try /students endpoint</p>
-    """
+def index():
+    students = mongo.db.students.find()
+    return render_template('index.html', students=students)
 
 
-# Get all students
-@app.route('/students', methods=['GET'])
-def get_students():
-    try:
-        students = list(mongo.db.students.find({}, {"_id": 0}))
-        return jsonify(students)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# Add a student
-@app.route('/students', methods=['POST'])
+# Add student
+@app.route('/add', methods=['GET', 'POST'])
 def add_student():
-    try:
-        data = request.json
-
-        if not data or "name" not in data:
-            return jsonify({"error": "Name is required"}), 400
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+        course = request.form['course']
 
         mongo.db.students.insert_one({
-            "name": data["name"],
-            "age": data.get("age", None)
+            "name": name,
+            "email": email,
+            "course": course
         })
 
-        return jsonify({"message": "Student added successfully"}), 201
+        return redirect(url_for('index'))
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return render_template('add_student.html')
 
 
-# Health check (important for DevOps)
-@app.route('/health', methods=['GET'])
+# Update student
+@app.route('/update/<student_id>', methods=['GET', 'POST'])
+def update_student(student_id):
+    student = mongo.db.students.find_one({"_id": ObjectId(student_id)})
+
+    if request.method == 'POST':
+        new_name = request.form['name']
+        new_email = request.form['email']
+        new_course = request.form['course']
+
+        mongo.db.students.update_one(
+            {"_id": ObjectId(student_id)},
+            {"$set": {
+                "name": new_name,
+                "email": new_email,
+                "course": new_course
+            }}
+        )
+
+        return redirect(url_for('index'))
+
+    return render_template('update_student.html', student=student)
+
+
+# Delete student
+@app.route('/delete/<student_id>')
+def delete_student(student_id):
+    mongo.db.students.delete_one({"_id": ObjectId(student_id)})
+    return redirect(url_for('index'))
+
+
+# -------------------------------
+# DevOps Health Check (IMPORTANT)
+# -------------------------------
+@app.route('/health')
 def health():
     try:
-        # simple DB ping
         mongo.db.command("ping")
         return jsonify({"status": "healthy"}), 200
     except Exception as e:
@@ -76,5 +92,5 @@ def health():
 # -------------------------------
 # Run App
 # -------------------------------
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+if __name__ == '__main__':
+    app.run(host="0.0.0.0", port=5000, debug=True)
