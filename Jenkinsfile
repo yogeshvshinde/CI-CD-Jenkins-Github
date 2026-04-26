@@ -15,7 +15,8 @@ pipeline {
         stage('Build') {
             steps {
                 echo "Installing Python dependencies..."
-                sh 'pip install --no-cache-dir -r requirements.txt'
+                // Using --break-system-packages to bypass PEP 668 in this isolated Jenkins environment
+                sh 'pip install --break-system-packages --no-cache-dir -r requirements.txt'
             }
         }
 
@@ -25,7 +26,7 @@ pipeline {
                 // Note: The tests in test_app.py require a running MongoDB instance.
                 // In a full Jenkins setup, you would use a sidecar container for MongoDB.
                 // For demonstration purposes, we run pytest. If it fails due to no DB, you can bypass by appending '|| true'
-                sh 'pytest || echo "Tests failed/skipped due to missing DB context in simple agent."'
+                sh 'python3 -m pytest || echo "Tests failed/skipped due to missing DB context in simple agent."'
             }
         }
 
@@ -46,17 +47,27 @@ pipeline {
     post {
         success {
             echo "Pipeline executed successfully."
-            // Sends an email notification on success
-            mail to: "${NOTIFY_EMAIL}",
-                 subject: "SUCCESS: Jenkins Build #${env.BUILD_NUMBER} - ${env.JOB_NAME}",
-                 body: "The build and deployment completed successfully.\n\nCheck console output at: ${env.BUILD_URL}"
+            script {
+                try {
+                    mail to: "${NOTIFY_EMAIL}",
+                         subject: "SUCCESS: Jenkins Build #${env.BUILD_NUMBER} - ${env.JOB_NAME}",
+                         body: "The build and deployment completed successfully.\n\nCheck console output at: ${env.BUILD_URL}"
+                } catch (Exception e) {
+                    echo "Note: Email skipped because Jenkins SMTP is not configured. Pipeline is still successful."
+                }
+            }
         }
         failure {
             echo "Pipeline execution failed."
-            // Sends an email notification on failure
-            mail to: "${NOTIFY_EMAIL}",
-                 subject: "FAILURE: Jenkins Build #${env.BUILD_NUMBER} - ${env.JOB_NAME}",
-                 body: "The build process failed.\n\nCheck console output at: ${env.BUILD_URL}"
+            script {
+                try {
+                    mail to: "${NOTIFY_EMAIL}",
+                         subject: "FAILURE: Jenkins Build #${env.BUILD_NUMBER} - ${env.JOB_NAME}",
+                         body: "The build process failed.\n\nCheck console output at: ${env.BUILD_URL}"
+                } catch (Exception e) {
+                    echo "Note: Email skipped because Jenkins SMTP is not configured."
+                }
+            }
         }
     }
 }
