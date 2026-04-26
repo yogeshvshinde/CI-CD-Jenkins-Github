@@ -1,63 +1,38 @@
 pipeline {
-    agent any
-
-    triggers {
-        githubPush()
+    agent {
+        docker {
+            image 'python:3.10'
+        }
     }
 
     stages {
 
-        stage('Clone') {
-            steps {
-                git branch: 'main',
-                    url: 'https://github.com/yogeshvshinde/CI-CD-Jenkins-Github.git'
-            }
-        }
-
         stage('Build') {
             steps {
-                sh '''
-                python3 -m venv venv
-                . venv/bin/activate
-                pip install -r requirements.txt
-                '''
+                sh 'pip install -r requirements.txt'
             }
         }
 
         stage('Test') {
             steps {
-                sh '''
-                . venv/bin/activate
-                pytest
-                '''
+                sh 'pytest'
             }
         }
 
         stage('Deploy') {
             steps {
-                sh '''
-                pkill -f app.py || true
-                nohup python app.py > app.log 2>&1 &
-                '''
+                echo "Deploying to staging..."
+                sh 'python app.py &'
             }
         }
     }
 
     post {
         success {
-            emailext (
-                subject: "SUCCESS: ${env.JOB_NAME}",
-                body: "Build succeeded: ${env.BUILD_URL}",
-                to: "yogeshvshinde19@gmail.com"
-            )
+            echo "Build succeeded"
         }
-
         failure {
-            emailext (
-                subject: "FAILED: ${env.JOB_NAME}",
-                body: "Build failed: ${env.BUILD_URL}",
-                to: "yogeshvshinde19@gmail.com"
-            )
+            echo "Build failed"
         }
     }
 }
