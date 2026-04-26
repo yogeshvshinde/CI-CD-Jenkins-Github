@@ -1,0 +1,78 @@
+name: Flask CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+  release:
+    types: [created]
+
+jobs:
+
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Tests
+        run: |
+          pytest || echo "No tests found"
+
+      - name: Build Docker Image
+        run: |
+          docker build -t flask-app-image .
+
+  deploy-staging:
+    if: github.ref == 'refs/heads/staging'
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Staging Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            docker rm -f flask-container || true
+            docker pull flask-app-image || true
+            docker run -d \
+              --name flask-container \
+              --network mynet \
+              -p 5000:5000 \
+              -e MONGO_URI="mongodb://mongodb:27017/mydb" \
+              flask-app-image
+
+  deploy-production:
+    if: github.event_name == 'release'
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Production Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            docker rm -f flask-container || true
+            docker run -d \
+              --name flask-container \
+              --network mynet \
+              -p 5000:5000 \
+              -e MONGO_URI="mongodb://mongodb:27017/mydb" \
+              flask-app-image

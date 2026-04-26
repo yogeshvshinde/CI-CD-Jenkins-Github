@@ -133,4 +133,236 @@ MIT License
 ---
 
 
+# Flask CI/CD Pipeline with Jenkins, Docker and MongoDB
+
+## Project Overview
+
+This project demonstrates a complete CI/CD pipeline using:
+
+* Jenkins for automation
+* Docker for containerization
+* Flask as the web application
+* MongoDB as the database
+* Azure Ubuntu VM as the hosting environment
+
+The application is deployed on a single Ubuntu VM that serves as:
+
+* Jenkins server
+* Application server
+* Database host (via Docker container)
+
+---
+
+## Architecture
+
+GitHub Repo -> Jenkins Pipeline -> Docker Build -> Docker Run -> Flask App
+-> MongoDB Container
+
+---
+
+## Tech Stack
+
+* Python (Flask)
+* Docker
+* Jenkins
+* MongoDB (Docker container)
+* Azure Virtual Machine (Ubuntu)
+
+---
+
+## Project Structure
+
+```
+.
+├── app.py
+├── requirements.txt
+├── Dockerfile
+├── Jenkinsfile
+├── templates/
+│   ├── index.html
+│   ├── add_student.html
+│   └── update_student.html
+```
+
+---
+
+## Setup Instructions
+
+### 1. Prerequisites
+
+* Ubuntu VM (Azure)
+* Jenkins installed
+* Docker installed
+* Git installed
+
+---
+
+### 2. Install Docker
+
+```bash
+sudo apt update
+sudo apt install -y docker.io
+sudo systemctl start docker
+sudo systemctl enable docker
+```
+
+---
+
+### 3. Create Docker Network
+
+```bash
+docker network create mynet
+```
+
+---
+
+### 4. Run MongoDB Container
+
+```bash
+docker run -d \
+--name mongodb \
+--network mynet \
+-p 27017:27017 \
+mongo
+```
+
+---
+
+### 5. Build Flask Docker Image
+
+```bash
+docker build -t flask-app-image .
+```
+
+---
+
+### 6. Run Flask Container
+
+```bash
+docker run -d \
+--name flask-container \
+--network mynet \
+-p 5000:5000 \
+-e MONGO_URI="mongodb://mongodb:27017/mydb" \
+flask-app-image
+```
+
+---
+
+## Jenkins CI/CD Pipeline
+
+### Pipeline Stages
+
+1. Clone GitHub repository
+2. Build Docker image
+3. Stop existing container
+4. Deploy new container
+
+---
+
+### Sample Jenkinsfile
+
+```groovy
+pipeline {
+    agent any
+
+    stages {
+        stage('Clone Repo') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Saima-Devops/Flask-App-CI-CD-Pipeline.git'
+            }
+        }
+
+        stage('Build Image') {
+            steps {
+                script {
+                    docker.build("flask-app-image")
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh 'docker rm -f flask-container || true'
+                sh '''
+                docker run -d \
+                --name flask-container \
+                --network mynet \
+                -p 5000:5000 \
+                -e MONGO_URI="mongodb://mongodb:27017/mydb" \
+                flask-app-image
+                '''
+            }
+        }
+    }
+}
+```
+
+---
+
+## Application Access
+
+Flask App:
+http://<VM-PUBLIC-IP>:5000
+
+Health Check:
+http://<VM-PUBLIC-IP>:5000/health
+
+---
+
+## Features
+
+* Add, update, delete student records
+* MongoDB integration
+* Dockerized deployment
+* CI/CD pipeline using Jenkins
+* Environment variable configuration
+* Health check endpoint
+
+---
+
+## Evidence for Assessment
+
+Include screenshots of:
+
+* Jenkins pipeline success
+* Docker containers running (docker ps)
+* Flask app UI (home page)
+* Add, update, delete operations
+* MongoDB data (mongosh)
+* Email notifications (if configured)
+
+---
+
+## Key Learnings
+
+* CI/CD pipeline implementation using Jenkins
+* Containerization using Docker
+* Service communication using Docker networks
+* Environment-based configuration
+* Debugging containerized applications
+
+---
+
+## Future Enhancements
+
+* Docker Compose setup
+* Nginx reverse proxy (port 80)
+* GitHub webhook integration
+* Kubernetes deployment
+* Secure secrets management
+
+---
+
+## Author
+
+DevOps CI/CD Project
+
+---
+
+## Conclusion
+
+This project demonstrates a complete end-to-end DevOps pipeline integrating source control, automation, containerization and deployment on a cloud VM.
+
+
 
