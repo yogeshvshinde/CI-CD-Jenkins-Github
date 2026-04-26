@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage('Clone Repo') {
             steps {
-                git 'https://github.com/Saima-Devops/Flask-App-CI-CD-Pipeline.git'
+                git 'https://github.com/yogeshvshinde/CI-CD-Jenkins-Github.git'
             }
         }
 
