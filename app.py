@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_pymongo import PyMongo
 import os
-import certifi
+
 
 app = Flask(__name__)
 
@@ -12,11 +12,12 @@ if not mongo_uri:
     raise Exception("MONGO_URI environment variable not set!")
 
 # Configure MongoDB
-app.config["MONGO_URI"] = mongo_uri
+app.config["MONGO_URI"] = os.environ.get("MONGO_URI")
+
 
 # Initialize PyMongo
-mongo = PyMongo(app, tlsCAFile=certifi.where())
 
+mongo = PyMongo(app)
 
 # -------------------------------
 # Routes
