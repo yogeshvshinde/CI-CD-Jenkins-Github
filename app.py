@@ -19,64 +19,62 @@ app.config["MONGO_URI"] = os.environ.get("MONGO_URI")
 
 mongo = PyMongo(app)
 
-
-
 # -------------------------------
 # Routes
 # -------------------------------
 
-
 @app.route('/')
-def index():
-    """Display all students"""
-    students = mongo.db.students.find()
-    return render_template('index.html', students=students)
+def home():
+    return """
+    <h1>Flask CI/CD Pipeline 🚀</h1>
+    <p>MongoDB Connected Successfully</p>
+    <p>Try /students endpoint</p>
+    """
 
 
-@app.route('/add', methods=['GET', 'POST'])
+# Get all students
+@app.route('/students', methods=['GET'])
+def get_students():
+    try:
+        students = list(mongo.db.students.find({}, {"_id": 0}))
+        return jsonify(students)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# Add a student
+@app.route('/students', methods=['POST'])
 def add_student():
-    """Add a new student"""
-    if request.method == 'POST':
+    try:
+        data = request.json
+
+        if not data or "name" not in data:
+            return jsonify({"error": "Name is required"}), 400
+
         mongo.db.students.insert_one({
-            "name": request.form['name'],
-            "email": request.form['email'],
-            "course": request.form['course']
+            "name": data["name"],
+            "age": data.get("age", None)
         })
-        return redirect(url_for('index'))
 
-    return render_template('add_student.html')
+        return jsonify({"message": "Student added successfully"}), 201
 
-
-@app.route('/update/<student_id>', methods=['GET', 'POST'])
-def update_student(student_id):
-    """Update existing student"""
-    student = mongo.db.students.find_one({"_id": ObjectId(student_id)})
-
-    if request.method == 'POST':
-        mongo.db.students.update_one(
-            {"_id": ObjectId(student_id)},
-            {
-                "$set": {
-                    "name": request.form['name'],
-                    "email": request.form['email'],
-                    "course": request.form['course']
-                }
-            }
-        )
-        return redirect(url_for('index'))
-
-    return render_template('update_student.html', student=student)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
-@app.route('/delete/<student_id>')
-def delete_student(student_id):
-    """Delete a student"""
-    mongo.db.students.delete_one({"_id": ObjectId(student_id)})
-    return redirect(url_for('index'))
+# Health check (important for DevOps)
+@app.route('/health', methods=['GET'])
+def health():
+    try:
+        # simple DB ping
+        mongo.db.command("ping")
+        return jsonify({"status": "healthy"}), 200
+    except Exception as e:
+        return jsonify({"status": "unhealthy", "error": str(e)}), 500
 
 
-if __name__ == '__main__':
-    # ❌ DO NOT use debug=True in production
-    debug_mode = os.environ.get("FLASK_DEBUG", "False") == "True"
-
-    app.run(host="0.0.0.0", port=5000, debug=debug_mode)
+# -------------------------------
+# Run App
+# -------------------------------
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
