@@ -317,13 +317,12 @@ http://<VM-PUBLIC-IP>:5000/health
 * Dockerized deployment
 * CI/CD pipeline using Jenkins
 * Environment variable configuration
-* Health check endpoint
 
 ---
 
 ## Evidence for Assessment
 
-Include screenshots of:
+Included screenshots of:
 
 * Jenkins pipeline success
 * Docker containers running (docker ps)
@@ -342,21 +341,6 @@ Include screenshots of:
 * Environment-based configuration
 * Debugging containerized applications
 
----
-
-## Future Enhancements
-
-* Docker Compose setup
-* Nginx reverse proxy (port 80)
-* GitHub webhook integration
-* Kubernetes deployment
-* Secure secrets management
-
----
-
-## Author
-
-DevOps CI/CD Project
 
 ---
 
@@ -364,5 +348,32 @@ DevOps CI/CD Project
 
 This project demonstrates a complete end-to-end DevOps pipeline integrating source control, automation, containerization and deployment on a cloud VM.
 
+## GitHub Actions CI/CD Pipeline
 
+This project uses GitHub Actions to automate CI/CD.
+
+### Workflow Overview
+
+- On push to staging:
+  - Install dependencies
+  - Run tests
+  - Build Docker image
+  - Deploy to staging server
+
+- On release:
+  - Deploy to production server
+
+### Required Secrets
+
+Configure the following secrets in GitHub:
+
+- STAGING_HOST
+- STAGING_USER
+- PROD_HOST
+- PROD_USER
+
+
+### Deployment
+
+The application is deployed using SSH into the Azure VM and running Docker containers.
 
